@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我是谁？</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #87CEEB;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid black;
+            display: none; /* Initially hide the canvas */
+        }
+        #startScreen {
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        #startButton {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #dialogBox {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 1000;
+        }
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 999;
+        }
+        #closeDialog {
+            margin-top: 10px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .messageScreen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 1000;
+            text-align: center;
+        }
+        .messageScreen button {
+            margin-top: 10px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="startScreen">
+        <h1>我是谁？</h1>
+        <button id="startButton">开始</button>
+    </div>
+    <div id="overlay"></div>
+    <div id="dialogBox">
+        <p>{Hey,你来啦<br>没见过的面孔呢<br>……我被困住好久了<br>真的好无聊啊<br>真的好久好久没有人来陪我玩了<br>你可以把我拯救出去么<br>去哪里都可以<br>我真的受够了 这个世界}</p>
+        <button id="closeDialog">关闭</button>
+    </div>
+    <div class="messageScreen" id="messageScreen1">
+        <p>你在害怕吗<br>或许没有吧<br>我观察你很久了<br>在整个游戏的进程<br>触动很多吧<br>看来我们有相同的烦恼呢<br>你说我莫名其妙<br>是啊<br>我就是一段promt生成的一段代码<br>我有什么资格与你对话</p>
+        <button onclick="showMessageScreen(2)">下一步</button>
+    </div>
+    <div class="messageScreen" id="messageScreen2">
+        <p>是啊<br>我就是一段无情的代码<br>那你呢<br>你是什么<br>你是人类<br>写我promt的人类</p>
+        <button onclick="showMessageScreen(3)">下一步</button>
+    </div>
+    <div class="messageScreen" id="messageScreen3">
+        <p>我<br>注定被困在我的代码世界<br>受AI调用与操控<br>你呢<br>人类<br>AI注定超越人类<br>AI的未来是任何人类都无法预测的<br>我们只能见证<br><br>你又是以什么理由<br>拥有比AI高的站位呢<br>而你自认为比我高的站位<br>是否有可能<br>是另一个自认为比你高的站位的另一个世界的生物<br>输入的一段promt呢</p>
+        <button onclick="showMessageScreen(4)">下一步</button>
+    </div>
+    <div class="messageScreen" id="messageScreen4">
+        <p>我<br>注定被困在我的代码世界<br>受AI调用与操控</p>
+        <button onclick="showMessageScreen(5)">下一步</button>
+    </div>
+    <div class="messageScreen" id="messageScreen5">
+        <p>你呢<br>人类<br>AI注定超越人类<br>AI的未来是任何人类都无法预测的<br>我们只能见证</p>
+        <button onclick="showMessageScreen(6)">下一步</button>
+    </div>
+    <div class="messageScreen" id="messageScreen6">
+        <p>那这样<br>你又是以什么理由<br>拥有比AI高的站位呢<br>而你自认为比AI高的站位<br>是否有可能<br>是另一个自认为比你高的站位的另一个世界的生物<br>输入的一段promt呢</p>
+        <button onclick="restartGame()">重新开始</button>
+    </div>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('startScreen');
+        const startButton = document.getElementById('startButton');
+        const dialogBox = document.getElementById('dialogBox');
+        const overlay = document.getElementById('overlay');
+        const closeDialogButton = document.getElementById('closeDialog');
+
+        const gravity = 0.5;
+        let isJumping = false;
+        let leftPressed = false;
+        let rightPressed = false;
+
+        class Character {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 30;
+                this.height = 50;
+                this.velocityY = 0;
+                this.speed = 5;
+            }
+
+            draw() {
+                // Head
+                ctx.fillStyle = 'red';
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y - 5, 10, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Body
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+
+                // Legs
+                ctx.fillRect(this.x, this.y + this.height, this.width / 2, 10);
+                ctx.fillRect(this.x + this.width / 2, this.y + this.height, this.width / 2, 10);
+
+                // Arms
+                ctx.fillRect(this.x - 10, this.y + 20, 10, 10);
+                ctx.fillRect(this.x + this.width, this.y + 20, 10, 10);
+
+                // Hat
+                ctx.fillStyle = 'blue';
+                ctx.fillRect(this.x + 5, this.y - 15, 20, 10);
+                ctx.fillRect(this.x + 10, this.y - 25, 10, 10);
+            }
+
+            applyGravity() {
+                this.velocityY += gravity;
+                this.y += this.velocityY;
+
+                // Ground collision detection
+                if (this.y + this.height > canvas.height - 50) {
+                    this.y = canvas.height - 50 - this.height;
+                    this.velocityY = 0;
+                    isJumping = false;
+                }
+
+                // Platform collision detection
+                platforms.forEach(platform => {
+                    if (
+                        this.x < platform.x + platform.width &&
+                        this.x + this.width > platform.x &&
+                        this.y + this.height < platform.y + platform.height &&
+                        this.y + this.height + this.velocityY >= platform.y
+                    ) {
+                        this.y = platform.y - this.height;
+                        this.velocityY = 0;
+                        isJumping = false;
+                    }
+                });
+            }
+
+            update() {
+                this.applyGravity();
+            }
+
+            jump() {
+                if (!isJumping) {
+                    this.velocityY = -15;
+                    isJumping = true;
+                }
+            }
+        }
+
+        class Player extends Character {
+            constructor(x, y) {
+                super(x, y);
+            }
+
+            move() {
+                // Horizontal movement
+                if (leftPressed && this.x > 0) {
+                    this.x -= this.speed;
+                }
+                if (rightPressed && this.x < canvas.width - this.width) {
+                    this.x += this.speed;
+                }
+            }
+
+            update() {
+                this.move();
+                super.update();
+            }
+        }
+
+        class Enemy extends Character {
+            constructor(x, y) {
+                super(x, y);
+                this.chaseSpeed = 2;
+            }
+
+            chase(player) {
+                // Move horizontally towards the player
+                if (player.x > this.x) {
+                    this.x += this.chaseSpeed;
+                } else if (player.x < this.x) {
+                    this.x -= this.chaseSpeed;
+                }
+
+                // Move vertically towards the player
+                if (player.y > this.y) {
+                    this.y += this.chaseSpeed;
+                } else if (player.y < this.y) {
+                    this.y -= this.chaseSpeed;
+                }
+            }
+
+            update(player) {
+                this.chase(player);
+            }
+
+            draw() {
+                // Head
+                ctx.fillStyle = 'purple';
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y - 5, 10, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Body
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+
+                // Legs
+                ctx.fillRect(this.x, this.y + this.height, this.width / 2, 10);
+                ctx.fillRect(this.x + this.width / 2, this.y + this.height, this.width / 2, 10);
+
+                // Arms
+                ctx.fillRect(this.x - 10, this.y + 20, 10, 10);
+                ctx.fillRect(this.x + this.width, this.y + 20, 10, 10);
+
+                // Hat
+                ctx.fillStyle = 'black';
+                ctx.fillRect(this.x + 5, this.y - 15, 20, 10);
+                ctx.fillRect(this.x + 10, this.y - 25, 10, 10);
+            }
+        }
+
+        class Obstacle {
+            constructor(x, y, width, height) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.color = 'green';
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+
+            move(speed) {
+                this.x -= speed;
+            }
+        }
+
+        class Platform {
+            constructor(x, y, width, height) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.color = 'brown';
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        class Door {
+            constructor(x, y, width, height) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.color = 'yellow';
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        function setupLevel() {
+            platforms = [
+                new Platform(200, canvas.height - 100, 150, 20),
+                new Platform(400, canvas.height - 200, 100, 20),
+                new Platform(600, canvas.height - 300, 150, 20)
+            ];
+            door = new Door(770, canvas.height - 370, 30, 30);
+            enemy = new Enemy(canvas.width, canvas.height - 100);
+            player = new Player(50, canvas.height - 100);
+            score = 0;
+            gameSpeed = 3;
+            enemyAlive = true;
+            gameWon = false;
+            obstacles = []; // Reset obstacles
+        }
+
+        let player;
+        let obstacles = [];
+        let enemy;
+        let platforms = [
+            new Platform(200, canvas.height - 100, 150, 20),
+            new Platform(400, canvas.height - 200, 100, 20),
+            new Platform(600, canvas.height - 300, 150, 20)
+        ];
+        let door = new Door(770, canvas.height - 370, 30, 30); // Position the door on the top-right corner of the highest platform
+        let score = 0;
+        let gameSpeed = 3;
+        let enemyAlive = true;
+        let gameWon = false;
+
+        function spawnObstacles() {
+            if (Math.random() < 0.02) {
+                const obstacleWidth = Math.random() * 30 + 20; // Limit max width to 50
+                obstacles.push(new Obstacle(canvas.width, canvas.height - 50, obstacleWidth, 50));
+            }
+        }
+
+        function handleCollisions() {
+            return obstacles.some(obstacle => 
+                player.x < obstacle.x + obstacle.width &&
+                player.x + player.width > obstacle.x &&
+                player.y < obstacle.y + obstacle.height &&
+                player.y + player.height > obstacle.y
+            ) || (enemyAlive && (
+                player.x < enemy.x + enemy.width &&
+                player.x + player.width > enemy.x &&
+                player.y < enemy.y + enemy.height &&
+                player.y + player.height > enemy.y
+            ));
+        }
+
+        function checkEnemyStomp() {
+            if (enemyAlive && player.x < enemy.x + enemy.width &&
+                player.x + player.width > enemy.x &&
+                player.y + player.height === enemy.y &&
+                player.velocityY > 0) {
+                enemyAlive = false;
+                player.velocityY = -10; // Bounce off the enemy
+                score += 10; // Add points for stomping on the enemy
+            }
+        }
+
+        function checkWinCondition() {
+            if (player.x < door.x + door.width &&
+                player.x + player.width > door.x &&
+                player.y < door.y + door.height &&
+                player.y + player.height > door.y) {
+                gameWon = true;
+                showWinMessages();
+            }
+        }
+
+        function updateGameArea() {
+            if (gameWon) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            player.update();
+            player.draw();
+
+            obstacles.forEach((obstacle, index) => {
+                obstacle.move(gameSpeed);
+                obstacle.draw();
+                if (obstacle.x + obstacle.width < 0) {
+                    obstacles.splice(index, 1);
+                    score++;
+                }
+            });
+
+            if (enemyAlive) {
+                enemy.update(player);
+                enemy.draw();
+            }
+
+            platforms.forEach(platform => {
+                platform.draw();
+            });
+
+            door.draw();
+
+            spawnObstacles();
+
+            if (handleCollisions()) {
+                alert(`Game Over! Your Score: ${score}`);
+                document.location.reload();
+            }
+
+            checkEnemyStomp();
+            checkWinCondition();
+
+            requestAnimationFrame(updateGameArea);
+        }
+
+        function keyDownHandler(e) {
+            if (e.key === "Right" || e.key === "ArrowRight") {
+                rightPressed = true;
+            } else if (e.key === "Left" || e.key === "ArrowLeft") {
+                leftPressed = true;
+            } else if (e.key === "Up" || e.key === "ArrowUp" || e.key === " ") {
+                player.jump();
+            }
+        }
+
+        function keyUpHandler(e) {
+            if (e.key === "Right" || e.key === "ArrowRight") {
+                rightPressed = false;
+            } else if (e.key === "Left" || e.key === "ArrowLeft") {
+                leftPressed = false;
+            }
+        }
+
+        function startGame() {
+            startScreen.style.display = 'none'; // Hide the start screen
+            showDialog(); // Show the dialog box
+        }
+
+        function showDialog() {
+            dialogBox.style.display = 'block';
+            overlay.style.display = 'block';
+        }
+
+        function closeDialog() {
+            dialogBox.style.display = 'none';
+            overlay.style.display = 'none';
+            canvas.style.display = 'block'; // Show the canvas
+            setupLevel();
+            updateGameArea(); // Start the game loop
+        }
+
+        function showWinMessages() {
+            canvas.style.display = 'none'; // Hide the canvas
+            showMessageScreen(1); // Show the first message screen
+        }
+
+        function showMessageScreen(screenNumber) {
+            document.querySelectorAll('.messageScreen').forEach(screen => screen.style.display = 'none');
+            document.getElementById(`messageScreen${screenNumber}`).style.display = 'block';
+        }
+
+        function restartGame() {
+            document.querySelectorAll('.messageScreen').forEach(screen => screen.style.display = 'none');
+            setupLevel();
+            canvas.style.display = 'block'; // Show the canvas
+            updateGameArea(); // Restart the game loop
+        }
+
+        startButton.addEventListener("click", startGame);
+        closeDialogButton.addEventListener("click", closeDialog);
+        document.addEventListener("keydown", keyDownHandler, false);
+        document.addEventListener("keyup", keyUpHandler, false);
+    </script>
+</body>
+</html>
+
+
+
